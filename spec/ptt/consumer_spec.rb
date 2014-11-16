@@ -1,0 +1,44 @@
+require 'ptt/consumer'
+
+RSpec.describe PTT::Consumer do
+  subject { described_class.new(channel, queue) }
+
+  let(:channel) { double('Channel') }
+  let(:queue) { double('Queue') }
+  let(:handler) { Proc.new {} }
+
+  before do
+    allow(queue).to receive(:subscribe)
+  end
+
+  describe '#subscribe' do
+    it 'should subscribe to designated queue' do
+      expect(queue).to receive(:subscribe)
+      subject.subscribe(handler)
+    end
+  end
+
+  describe '#receive' do
+    # `delivery_info`, `properties`, `body` are required parameters for Bunny
+    # callback method
+    let(:delivery_info) { double('DeliveryInfo', delivery_tag: 'quox') }
+    let(:properties) { double('Properties') }
+    let(:body) { JSON.generate({ foo: 'bar' }) }
+    let(:parsed_body) { JSON.parse(body) }
+
+    before do
+      allow(channel).to receive(:ack)
+      subject.subscribe(handler)
+    end
+
+    it 'should process parsed message body using designated handler' do
+      expect(handler).to receive(:call).with(parsed_body)
+      subject.receive(delivery_info, properties, body)
+    end
+
+    it 'should acknowledge the message' do
+      expect(channel).to receive(:ack).with(delivery_info.delivery_tag)
+      subject.receive(delivery_info, properties, body)
+    end
+  end
+end
