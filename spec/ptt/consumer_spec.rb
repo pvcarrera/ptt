@@ -40,5 +40,21 @@ RSpec.describe PTT::Consumer do
       expect(channel).to receive(:ack).with(delivery_info.delivery_tag)
       subject.receive(delivery_info, properties, body)
     end
+
+    context 'when call to the handler fails' do
+      before do
+        allow(handler).to receive(:call).and_raise(StandardError.new(
+          'Handler intensionally fails'
+        ))
+      end
+
+      it 'should reject the message with requeueing' do
+        expect(channel).to receive(:reject).with(
+          delivery_info.delivery_tag,
+          true
+        )
+        subject.receive(delivery_info, properties, body)
+      end
+    end
   end
 end
