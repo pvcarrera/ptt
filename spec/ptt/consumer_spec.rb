@@ -48,7 +48,7 @@ RSpec.describe PTT::Consumer do
         ))
       end
 
-      it 'should reject the message with requeueing' do
+      it 'should reject the message without requeueing' do
         expect(channel).to receive(:reject).with(
           delivery_info.delivery_tag,
           false
