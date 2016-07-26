@@ -21,5 +21,4 @@ RSpec.describe PTT::Publisher do
       subject.publish(routing_key, data)
     end
   end
-
 end
