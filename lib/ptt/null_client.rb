@@ -16,10 +16,16 @@ module PTT
   #     ptt.client = PTT::NullClient.new
   #   end
   class NullClient
+    def connected?
+      @connected
+    end
+
     def connect
+      @connected = true
     end
 
     def disconnect
+      @connected = false
     end
 
     def channel

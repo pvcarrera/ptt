@@ -11,6 +11,10 @@ module PTT
 
     class ConnectionError < Error; end
 
+    def connected?
+      @connection && @connection.open?
+    end
+
     def connect
       connection.start
     rescue Bunny::TCPConnectionFailed => exception
@@ -18,7 +22,7 @@ module PTT
     end
 
     def disconnect
-      if connection && connection.open?
+      if connected?
         connection.close
         @connection = nil
       end

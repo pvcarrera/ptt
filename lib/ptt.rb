@@ -17,7 +17,7 @@ module PTT
     client.connect
 
     handlers.each do |(routing_key, handler)|
-      consumers[routing_key].subscribe(handler)
+      subscribe(routing_key, handler)
     end
   end
 
@@ -27,6 +27,8 @@ module PTT
 
   def register_handler(routing_key, handler)
     handlers[routing_key] = handler
+
+    subscribe(routing_key, handler) if client.connected?
   end
 
   def handler_for(routing_key)
@@ -54,6 +56,10 @@ module PTT
         client.queue_for(routing_key)
       )
     end
+  end
+
+  def subscribe(routing_key, handler)
+    consumers[routing_key].subscribe(handler)
   end
 
   def handlers
