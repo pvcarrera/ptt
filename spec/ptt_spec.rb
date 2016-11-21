@@ -5,6 +5,8 @@ RSpec.describe PTT do
   subject { described_class }
 
   let(:amqp_client) { PTT::NullClient.new }
+  let(:handler) { Proc.new {  } }
+
 
   before do
     subject.client = amqp_client
@@ -24,7 +26,14 @@ RSpec.describe PTT do
       subject.connect
     end
 
-    it 'should subscribe all available consumers'
+    it 'should subscribe all available consumers' do
+      allow(subject).to receive(:subscribe)
+      subject.register_handler('foo', handler)
+      expect(subject).not_to have_received(:subscribe)
+
+      expect(subject).to receive(:subscribe).with('foo', handler)
+      subject.connect
+    end
   end
 
   describe '.disconnect' do
@@ -39,11 +48,17 @@ RSpec.describe PTT do
   end
 
   describe '.register_handler' do
-    let(:handler) { Proc.new {  } }
-
     it 'should register a message handler by given routing key' do
       subject.register_handler('foo', handler)
       expect(subject.handler_for('foo')).to eq(handler)
+    end
+
+    it 'should subscribe immediately if connected' do
+      subject.connect
+
+      allow(amqp_client).to receive(:connected?).and_return(true)
+      expect(subject).to receive(:subscribe).with('foo', handler)
+      subject.register_handler('foo', handler)
     end
   end
 
