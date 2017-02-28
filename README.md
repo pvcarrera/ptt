@@ -70,4 +70,4 @@ PTT.publish('bar', data)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
 
-(c) 2016 [Alexander Sulim](http://sul.im)
+(c) 2017 [Alexander Sulim](http://sul.im)
