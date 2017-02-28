@@ -6,7 +6,7 @@ require 'ptt/version'
 Gem::Specification.new do |spec|
   spec.name          = 'ptt'
   spec.version       = PTT::VERSION
-  spec.authors       = ['Alex Sulim']
+  spec.authors       = ['Alexander Sulim']
   spec.email         = ['hello@sul.im']
   spec.summary       = %q{PTT - Pneumatic Tube Transport}
   spec.description   = %q{PTT - messaging based on AMQP and some conventions}
