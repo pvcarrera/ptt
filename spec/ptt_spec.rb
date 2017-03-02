@@ -1,5 +1,6 @@
 require 'ptt'
 require 'ptt/null_client'
+require 'ptt/memory_client'
 
 RSpec.describe PTT do
   subject { described_class }
@@ -87,6 +88,33 @@ RSpec.describe PTT do
     it 'should publish data with given routing key' do
       expect(publisher).to receive(:publish).with(routing_key, data)
       subject.publish(routing_key, data)
+    end
+  end
+
+  context 'when a in-memory client is used' do
+    before do
+      client = PTT::MemoryClient.new
+
+      PTT.configure do |ptt|
+        ptt.client = client
+        ptt.publisher = PTT::Publisher.new(client.exchange)
+      end
+      PTT.connect
+
+      $stdout = StringIO.new
+    end
+
+    after do
+      $stdout = STDOUT
+    end
+
+    it 'processes all published messages immediately' do
+      PTT.register_handler('quox', -> (payload) { puts(payload) })
+
+      PTT.publish('quox', { quox: 'Hello World' })
+
+      puts $stdout.string
+      expect($stdout.string).to include('{"quox"=>"Hello World"}')
     end
   end
 end
