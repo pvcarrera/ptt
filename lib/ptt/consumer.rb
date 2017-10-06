@@ -9,11 +9,9 @@ module PTT
 
     def subscribe(handler)
       @handler = handler
-      @queue.subscribe(ack: true, &method(:receive))
+      @queue.subscribe(manual_ack: true, &method(:receive))
     end
 
-    # FIXME Fix deprecation:
-    #       `:ack` is deprecated. Please use `:manual_ack` instead.
     def receive(delivery_info, properties, body)
       @handler.call(JSON.parse(body))
       @channel.ack(delivery_info.delivery_tag)

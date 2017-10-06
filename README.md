@@ -40,7 +40,7 @@ class Handler
   end
 end
 
-# In this case `Handler#call` will be called each time when a new messages comes
+# In this case `Handler#call` will be called each time when a new message comes
 # from RabbitMQ with routing key `foo`
 PTT.configure do |pneumatic_tube|
   pneumatic_tube.register_handler('foo', Handler.new)
