@@ -5,6 +5,7 @@ module PTT
     def initialize(channel, queue)
       @channel = channel
       @queue = queue
+      @requeue = ENV['REQUEUE_REJECTED_MESSAGE'] == 'true' ? true : false
     end
 
     def subscribe(handler)
@@ -16,7 +17,7 @@ module PTT
       @handler.call(JSON.parse(body))
       @channel.ack(delivery_info.delivery_tag)
     rescue => e
-      @channel.reject(delivery_info.delivery_tag, false)
+      @channel.reject(delivery_info.delivery_tag, @requeue)
     end
   end
 end

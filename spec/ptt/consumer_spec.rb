@@ -6,8 +6,10 @@ RSpec.describe PTT::Consumer do
   let(:channel) { double('Channel') }
   let(:queue) { double('Queue') }
   let(:handler) { Proc.new {} }
+  let(:requeue_rejected) { nil }
 
   before do
+    ENV['REQUEUE_REJECTED_MESSAGE'] = requeue_rejected
     allow(queue).to receive(:subscribe)
   end
 
@@ -54,6 +56,18 @@ RSpec.describe PTT::Consumer do
           false
         )
         subject.receive(delivery_info, properties, body)
+      end
+
+      context 'and requeue ENV variable is set to true' do
+        let(:requeue_rejected) { 'true' }
+
+        it 'should reject the message and add it back to the queue' do
+          expect(channel).to receive(:reject).with(
+            delivery_info.delivery_tag,
+            true
+          )
+          subject.receive(delivery_info, properties, body)
+        end
       end
     end
   end
