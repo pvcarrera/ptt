@@ -7,7 +7,7 @@ PTT - messaging based on RabbitMQ and some conventions. It's built on top of [Bu
 - Messages are JSON-encoded strings
 - Consumers decode JSON payload and call message handlers
 - Publisher uses **just** direct AMQP exchange (however it might change later)
-- By default rejected messages are not requeued. This behviour can be changed by setting `ENV[REQUEUE_REJECTED_MESSAGE']='true'`
+- By default rejected messages are not requeued.
 
 ## Installation
 
@@ -57,6 +57,39 @@ data = { foo: 'bar' }
 
 # JSON encoded data will be send to exchange with `bar` routing key
 PTT.publish('bar', data)
+```
+
+In case you need to requeue rejected messages there are two option available:
+
+ - Via environment variable: `PTT_REQUEUE_REJECTED_MESSAGE=true`.
+This will override the default requeu value for the whole project.
+
+ - Per handler, example:
+
+```ruby
+class CarefulHandler
+  def call(json)
+    # do some work
+  end
+
+  def  requeue?
+    # computes result based on internal state or logic,
+    # e.g. requeue on specific exceptions, but do not
+    # requeue in other cases.
+  end
+end
+
+class CarelessHandler
+  def call(json)
+    # do some work
+  end
+
+  def  requeue?
+    # in case of any failure simply drop messages from
+    # the queue and don't even try anything else.
+    return false
+  end
+end
 ```
 
 ## Testing
