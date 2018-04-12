@@ -7,6 +7,7 @@ PTT - messaging based on RabbitMQ and some conventions. It's built on top of [Bu
 - Messages are JSON-encoded strings
 - Consumers decode JSON payload and call message handlers
 - Publisher uses **just** direct AMQP exchange (however it might change later)
+- By default rejected messages are not requeued. This behviour can be changed by setting `ENV[REQUEUE_REJECTED_MESSAGE']='true'`
 
 ## Installation
 
