@@ -5,7 +5,7 @@ RSpec.describe PTT::Consumer do
 
   let(:channel) { double('Channel') }
   let(:queue) { double('Queue') }
-  let(:handler) { Proc.new {} }
+  let(:handler) { double('Handler', call: nil) }
   let(:requeue_rejected) { nil }
 
   before do
@@ -44,9 +44,11 @@ RSpec.describe PTT::Consumer do
     end
 
     context 'when call to the handler fails' do
+      let(:error_message) { 'Handler intensionally fails' }
+
       before do
         allow(handler).to receive(:call).and_raise(StandardError.new(
-          'Handler intensionally fails'
+          error_message
         ))
       end
 
@@ -59,9 +61,14 @@ RSpec.describe PTT::Consumer do
       end
 
       context 'and handler is set to requeu messages' do
-        let(:handler) { double(:call, requeue?: true) }
+        let(:handler) { double('handler', call: nil, requeue?: true) }
 
         it 'should reject the message and add it back to the queue' do
+          expect(handler).to receive(:requeue?) do |error|
+            expect(error).to be_a(StandardError)
+            expect(error.message).to eq(error_message)
+          end
+
           expect(channel).to receive(:reject).with(
             delivery_info.delivery_tag,
             true

@@ -16,16 +16,16 @@ module PTT
       @handler.call(JSON.parse(body))
       @channel.ack(delivery_info.delivery_tag)
     rescue => e
-      @channel.reject(delivery_info.delivery_tag, requeue)
+      @channel.reject(delivery_info.delivery_tag, requeue(e))
     end
 
     private
 
-    def requeue
+    def requeue(error)
       if @handler.respond_to?(:requeue?)
-        @handler.requeue?
+        @handler.requeue?(error)
       else
-        ENV['PTT_REQUEUE_REJECTED_MESSAGE'] == 'true' ? true : false
+        ENV['PTT_REQUEUE_REJECTED_MESSAGE'] == 'true'
       end
     end
   end
