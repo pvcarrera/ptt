@@ -62,7 +62,7 @@ PTT.publish('bar', data)
 In case you need to requeue rejected messages there are two option available:
 
  - Via environment variable: `PTT_REQUEUE_REJECTED_MESSAGE=true`.
-This will override the default requeu value for the whole project.
+This will override the default requeue value for the whole project.
 
  - Per handler, example:
 
@@ -72,10 +72,10 @@ class CarefulHandler
     # do some work
   end
 
-  def  requeue?
-    # computes result based on internal state or logic,
-    # e.g. requeue on specific exceptions, but do not
-    # requeue in other cases.
+  def requeue?(error)
+    # computes result based on the given error or
+    # any other internal logic, e.g. requeue on
+    # specific exceptions, but do not requeue in other cases.
   end
 end
 
@@ -84,7 +84,7 @@ class CarelessHandler
     # do some work
   end
 
-  def  requeue?
+  def requeue?(_)
     # in case of any failure simply drop messages from
     # the queue and don't even try anything else.
     return false
@@ -104,4 +104,4 @@ end
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
 
-(c) 2017 [Alexander Sulim](http://sul.im)
+(c) 2018 [Alexander Sulim](http://sul.im)
