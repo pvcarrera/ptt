@@ -61,7 +61,7 @@ PTT.publish('bar', data)
 
 In case you need to requeue rejected messages there are two option available:
 
- - Via environment variable: `PTT_REQUEUE_REJECTED_MESSAGE=true`.
+ - Via environment variable: `PTT_DEFAULT_RETRY=true`.
 This will override the default requeue value for the whole project.
 
  - Per handler, example:
@@ -94,7 +94,7 @@ end
 
 ## Testing
 
-    $ bundle exec rake
+    $ script/test
 
 ## Contributing
 

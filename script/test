@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+#
+# Run test suite for application. Optionally pass in a path to an individual
+# test file to run a single test.
+#
+# Examples
+#
+#   script/test [<FILE>]
+#
+# <FILE> - the path to a spec file.
+set -o errexit
+
+cd "$(dirname "$0")/.."
+
+echo "==> Starting tests…"
+docker-compose run --rm \
+                   tester rspec -I . --color "${@:-spec}"
+

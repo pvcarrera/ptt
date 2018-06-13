@@ -6,8 +6,14 @@ require 'ptt/version'
 module PTT
   extend self
 
-  attr_writer :client
   attr_writer :publisher
+
+  def client=(new_client)
+    @client = new_client
+    @consumers = nil
+    @handlers = nil
+    @client
+  end
 
   def configure
     yield(self) if block_given?
@@ -53,7 +59,8 @@ module PTT
     @consumers ||= Hash.new do |repository, routing_key|
       repository[routing_key] = Consumer.new(
         client.channel,
-        client.queue_for(routing_key)
+        client.queue_for(routing_key),
+        client.retry_queue_for(routing_key)
       )
     end
   end

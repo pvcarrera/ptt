@@ -1,17 +1,14 @@
 require 'ptt/consumer'
 
 RSpec.describe PTT::Consumer do
-  subject { described_class.new(channel, queue) }
+  subject { described_class.new(channel, queue, retry_queue) }
 
   let(:channel) { double('Channel') }
   let(:queue) { double('Queue') }
+  let(:retry_queue) { double('RetryQueue') }
   let(:handler) { double('Handler', call: nil) }
-  let(:requeue_rejected) { nil }
 
-  before do
-    ENV['PTT_REQUEUE_REJECTED_MESSAGE'] = requeue_rejected
-    allow(queue).to receive(:subscribe)
-  end
+  before { allow(queue).to receive(:subscribe) }
 
   describe '#subscribe' do
     it 'should subscribe to designated queue' do
@@ -24,13 +21,43 @@ RSpec.describe PTT::Consumer do
     # `delivery_info`, `properties`, `body` are required parameters for Bunny
     # callback method
     let(:delivery_info) { double('DeliveryInfo', delivery_tag: 'quox') }
-    let(:properties) { double('Properties') }
+    let(:properties) { double('Properties', headers: {}) }
     let(:body) { JSON.generate({ foo: 'bar' }) }
     let(:parsed_body) { JSON.parse(body) }
 
     before do
       allow(channel).to receive(:ack)
       subject.subscribe(handler)
+    end
+
+    shared_examples :successful_scheduled_retry do
+      it 'should publish the message to the retry queue' do
+        expect(retry_queue).to receive(:publish) do |payload, params|
+          # Body should be published without changes
+          expect(payload).to eq(body)
+          # TTL range is calculated as:
+          #
+          #   ((retry_count ** 4) + 15 + (rand(30) * (retry_count + 1)))*1000
+          #
+          # where rand(30) is replaced with the possible maximum of 29.
+          expect(0..74_000).to cover(params[:expiration])
+          # Default retries counter value is 0, so incremented value is
+          # expected to be 1.
+          expect(params[:headers]['x-retry-count']).to eq(1)
+        end
+        subject.receive(delivery_info, properties, body)
+      end
+    end
+
+    shared_examples :impossible_scheduled_retry do
+      it 'should not publish the message to the retry queue' do
+        expect(retry_queue).not_to receive(:publish)
+        subject.receive(delivery_info, properties, body) rescue error
+      end
+
+      it 'should re-raise the exception' do
+        expect { subject.receive(delivery_info, properties, body) }.to raise_error(error)
+      end
     end
 
     it 'should process parsed message body using designated handler' do
@@ -44,48 +71,73 @@ RSpec.describe PTT::Consumer do
     end
 
     context 'when call to the handler fails' do
-      let(:error_message) { 'Handler intensionally fails' }
+      let(:error) { StandardError.new('Handler intensionally fails') }
 
       before do
-        allow(handler).to receive(:call).and_raise(StandardError.new(
-          error_message
-        ))
+        allow(handler).to receive(:call).and_raise(error)
       end
 
-      it 'should reject the message without requeueing' do
-        expect(channel).to receive(:reject).with(
-          delivery_info.delivery_tag,
-          false
-        )
-        subject.receive(delivery_info, properties, body)
+      it 'should acknowledge the message' do
+        expect(channel).to receive(:ack).with(delivery_info.delivery_tag)
+        subject.receive(delivery_info, properties, body) rescue error
       end
 
-      context 'and handler is set to requeu messages' do
-        let(:handler) { double('handler', call: nil, requeue?: true) }
+      context 'and the handler wants to retry' do
+        before { allow(handler).to receive(:requeue?).and_return(true) }
 
-        it 'should reject the message and add it back to the queue' do
-          expect(handler).to receive(:requeue?) do |error|
-            expect(error).to be_a(StandardError)
-            expect(error.message).to eq(error_message)
+        include_examples :successful_scheduled_retry
+
+        context 'but the number of retries has been exhausted' do
+          before do
+            allow(properties).to receive(:headers).and_return({
+              'x-retry-count' => PTT::Consumer::MAX_RETRIES
+            })
           end
 
-          expect(channel).to receive(:reject).with(
-            delivery_info.delivery_tag,
-            true
-          )
-          subject.receive(delivery_info, properties, body)
+          include_examples :impossible_scheduled_retry
         end
       end
 
-      context 'and requeue ENV variable is set to true' do
-        let(:requeue_rejected) { 'true' }
+      context 'and the handler do not want to retry' do
+        before { allow(handler).to receive(:requeue?).and_return(false) }
 
-        it 'should reject the message and add it back to the queue' do
-          expect(channel).to receive(:reject).with(
-            delivery_info.delivery_tag,
-            true
-          )
-          subject.receive(delivery_info, properties, body)
+        include_examples :impossible_scheduled_retry
+      end
+
+      context 'and default retry is enabled' do
+        let!(:original_ptt_default_retry) { ENV['PTT_DEFAULT_RETRY'] }
+
+        before { ENV['PTT_DEFAULT_RETRY'] = 'true' }
+
+        after { ENV['PTT_DEFAULT_RETRY'] = original_ptt_default_retry }
+
+        include_examples :successful_scheduled_retry
+
+        context 'but the number of retries has been exhausted' do
+          before do
+            allow(properties).to receive(:headers).and_return({
+              'x-retry-count' => PTT::Consumer::MAX_RETRIES
+            })
+          end
+
+          include_examples :impossible_scheduled_retry
+        end
+      end
+
+      context 'and default retry is disabled' do
+        let!(:original_ptt_default_retry) { ENV['PTT_DEFAULT_RETRY'] }
+
+        before { ENV['PTT_DEFAULT_RETRY'] = 'false' }
+
+        after { ENV['PTT_DEFAULT_RETRY'] = original_ptt_default_retry }
+
+        it 'should not publish the message to the retry queue' do
+          expect(retry_queue).not_to receive(:publish)
+          subject.receive(delivery_info, properties, body) rescue error
+        end
+
+        it 'should re-raise the exception' do
+          expect { subject.receive(delivery_info, properties, body) }.to raise_error(error)
         end
       end
     end

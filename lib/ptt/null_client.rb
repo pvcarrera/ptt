@@ -39,6 +39,11 @@ module PTT
       queues[routing_key]
     end
 
+    def retry_queue_for(routing_key)
+      routing_key = "#{routing_key}.retry"
+      queues[routing_key]
+    end
+
     private
 
     def queues

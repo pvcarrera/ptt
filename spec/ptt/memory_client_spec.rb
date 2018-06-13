@@ -23,4 +23,10 @@ RSpec.describe PTT::MemoryClient do
       expect(subject.queue_for('foo')).to be_a(PTT::MemoryQueue)
     end
   end
+
+  describe '#retry_queue_for' do
+    it 'returns an instance of MemoryQueue' do
+      expect(subject.retry_queue_for('foo')).to be_a(PTT::MemoryQueue)
+    end
+  end
 end

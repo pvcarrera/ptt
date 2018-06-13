@@ -33,4 +33,10 @@ RSpec.describe PTT::NullClient do
       expect(queue1).to be_equal(queue2)
     end
   end
+
+  describe '#retry_queue_for' do
+    it 'returns an instance of NullQueue' do
+      expect(subject.retry_queue_for('foo')).to be_a(PTT::NullQueue)
+    end
+  end
 end

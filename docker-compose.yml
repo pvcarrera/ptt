@@ -1,0 +1,13 @@
+version: "3.1"
+
+services:
+  tester:
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+    image: gohiring/ptt:latest
+    volumes:
+      - .:/home/app
+  rabbitmq:
+    image: rabbitmq:latest
